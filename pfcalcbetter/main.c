@@ -157,10 +157,19 @@ long pfCalculate(struct token *tokens) {
 }
 
 int main(int argc, const char * argv[]) {
-    char const *expr = "1 3 5 8 + * -";
-    struct token* const root = tokenize(expr);
+    
+    printf("Please enter a postfix expression: ");
+    size_t lineSize;
+    char *line = fgetln(stdin, &lineSize);
+    if (line[lineSize - 1] == '\n') {
+        line[lineSize - 1] = '\0';
+    } else {
+        assertionFailure("expected newline at end of input");
+    }
+    
+    struct token* const root = tokenize(line);
     long result = pfCalculate(root);
-    printf("%s = %ld\n", expr, result);
+    printf("%s = %ld\n", line, result);
     free_tokens(root);
     return 0;
 }
