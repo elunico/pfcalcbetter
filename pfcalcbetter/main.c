@@ -6,170 +6,150 @@
 //
 
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <ctype.h>
 #include <math.h>
+#include <unistd.h>
 
-#define assertionFailure(msg) do { fprintf(stderr, msg); exit(1); } while(0)
+#include "token.h"
+#include "stack.h"
+#include "utils.h"
 
-struct token {
-    char *value;
-    struct token *prev;
-    struct token *next;
-};
-
-struct token* tokenize(char const *s) {
-    struct token *root = NULL;
-    struct token *walker = root;
-    char const *start = s;
-    while (*s) {
-        start = s;
-        size_t len = 0;
-        while (*s && *s != ' ') {
-            s++;
-            len++;
-        }
-        if (len > 0) {
-            struct token * nextwalker = calloc(1, sizeof(struct token));
-            nextwalker->value = malloc((len + 1) * sizeof(char));
-            memcpy(nextwalker->value, start, len);
-            nextwalker->value[len] = '\0';
-            
-            if (walker != NULL) {
-                walker->next = nextwalker;
-                nextwalker->prev = walker;
-                walker = nextwalker;
-            } else {
-                root = nextwalker;
-                walker = nextwalker;
-                nextwalker->prev = NULL;
-            }
-        }
-        if (!*s) {
-            break;
-        }
-        s = s + 1;
-    }
-    return root;
-}
-
-void free_tokens(struct token* tokens) {
-    if (tokens == NULL) return;
+pfnum_t atopfnt(char const *s) {
     
-    while (tokens->next != NULL) {
-        tokens = tokens->next;
-    }
-    while (tokens != NULL) {
-        struct token *p = tokens->prev;
-        free(tokens->value);
-        free(tokens);
-        tokens = p;
-    }
-}
-
-struct stack {
-    long rToken;
-    struct stack *next;
-    struct stack *prev;
-};
-
-void stack_push(struct stack **s, long t) {
-    if (*s == NULL) {
-        *s = malloc(sizeof(struct stack));
-        (*s)->rToken = t;
-        (*s)->next = NULL;
-        (*s)->prev = NULL;
-    } else {
-        (*s)->next = malloc(sizeof(struct stack));
-        (*s)->next->rToken = t;
-        (*s)->next->prev = *s;
-        *s = (*s)->next;
-    }
-}
-
-/// Implementation detail: the return value of `stack_pop` must be freed by the caller of this function
-long stack_pop(struct stack **s) {
-    if (*s == NULL) return __LONG_MAX__;
+#if pfnum_t == long
+    return atol(s);
+#elif pfnum_t == double;
+    return atof(s);
+#endif
     
-    long ret = (*s)->rToken;
-    struct stack *root = (*s)->prev;
-    free(*s);
-    *s = root;
-    return ret;
 }
 
-long stack_peek(struct stack *s) {
-    return s->rToken;
-}
-
-void stack_free(struct stack **s) {
-    while (stack_pop(s) != __LONG_MAX__);
-}
-
-/// The return value of this function is owned by the caller and should be freed by the caller of `pfCalculate`
-long pfCalculate(struct token *tokens) {
+pfnum_t pfCalculate(struct token *tokens) {
     struct stack *s = NULL;
+    int stepCount = 0;
     while (tokens != NULL) {
         char *tok = tokens->value;
         if (isdigit(tok[0])) {
-            long v = atol(tok);
+            pfnum_t v = atol(tok);
             stack_push(&s, v);
         } else if (ispunct(tok[0])) {
-            long rhs = stack_pop(&s);
-            if (rhs == __LONG_MAX__) {
+            pfnum_t rhs = stack_pop(&s);
+            if (rhs == MISSING_SENTINEL) {
                 assertionFailure("Too many operators");
             }
-            
-            long lhs = stack_pop(&s);
-            if (lhs == __LONG_MAX__) {
+            pfnum_t lhs = stack_pop(&s);
+            if (lhs == MISSING_SENTINEL) {
                 assertionFailure("Too many operators");
             }
-            
-            if (!strcmp(tok, "**")) {
-                // TODO: implement
-            } else {
-                long result;
-                if (tok[0] == '+') {
-                    result = lhs + rhs;
-                } else if (tok[0] == '-') {
-                    result = lhs - rhs;
-                } else if (tok[0] == '*') {
-                    result = lhs * rhs;
-                } else if (tok[0] == '/') {
-                    result = lhs / rhs;
-                } else {
-                    assertionFailure("invalid operator");
+            pfnum_t result;
+            if (tok[0] == '+') {
+                result = lhs + rhs;
+            } else if (tok[0] == '-') {
+                result = lhs - rhs;
+            } else if (tok[0] == '*') {
+                result = lhs * rhs;
+            } else if (tok[0] == '/') {
+                if (rhs == 0) {
+                    assertionFailure("Division by 0");
                 }
-                stack_push(&s, result);
+                result = lhs / rhs;
+            } else {
+                assertionFailure("invalid operator");
             }
+#ifndef NDEBUG
+            printf("Step %d: %lf %s %lf = %lf\n", ++stepCount, lhs, tok, rhs, result);
+#endif
+            stack_push(&s, result);
         }
         tokens = tokens->next;
     }
     
-    long result = stack_pop(&s);
+    pfnum_t result = stack_pop(&s);
     
-    if (stack_pop(&s) != __LONG_MAX__) {
+    if (stack_pop(&s) != MISSING_SENTINEL) {
         assertionFailure("Not enough operators");
     }
     
     return result;
 }
 
-int main(int argc, const char * argv[]) {
+struct arguments {
+    int isStdin;
+    char *filename;
+};
+
+struct arguments parseargs(int argc, char * const argv[]) {
+    struct arguments args = {0};
+    int c;
+    int didSet = 0;
+    while ((c = getopt(argc, argv, "if:")) != -1) {
+        int this_option_optind = optind ? optind : 1;
+        switch (c) {
+            case 'i': {
+                if (didSet) {
+                    assertionFailure("Choose either -i for -f FILE not both");
+                }
+                args.isStdin = 1;
+                args.filename = NULL;
+                didSet = 1;
+                break;
+            }
+            case 'f': {
+                if (didSet) {
+                    assertionFailure("Choose either -i for -f FILE not both");
+                }
+                args.isStdin = 0;
+                args.filename = optarg;
+                didSet = 1;
+                break;
+            }
+            case '?':
+                break;
+            default:
+                printf ("?? getopt returned character code 0%o ??\n", c);
+        }
+    }
+    if (optind < argc) {
+        printf ("non-option ARGV-elements: ");
+        while (optind < argc) {
+            printf ("%s ", argv[optind++]);
+        }
+        printf ("\n");
+    }
+    return args;
+}
+
+int main(int argc, char * const argv[]) {
     
-    printf("Please enter a postfix expression: ");
-    size_t lineSize;
-    char *line = fgetln(stdin, &lineSize);
-    if (line[lineSize - 1] == '\n') {
-        line[lineSize - 1] = '\0';
-    } else {
-        assertionFailure("expected newline at end of input");
+
+    
+    struct arguments args = parseargs(argc, argv);
+    
+    if (!args.isStdin && !args.filename) {
+        assertionFailure("Specify -i or -f FILE\n");
     }
     
-    struct token* const root = tokenize(line);
-    long result = pfCalculate(root);
-    printf("%s = %ld\n", line, result);
+    struct token * root;
+    if (args.isStdin) {
+        printf("Please enter a postfix expression: ");
+        size_t lineSize;
+        char *line = fgetln(stdin, &lineSize);
+        if (line[lineSize - 1] == '\n') {
+            line[lineSize - 1] = '\0';
+        } else {
+            assertionFailure("expected newline at end of input");
+        }
+        root = tokenize(line);
+    } else {
+        FILE *f = fopen(args.filename, "r");
+        root = ftokenize(f);
+        fclose(f);
+    }
+
+    pfnum_t result = pfCalculate(root);
+    printf("%s = %lf\n", "expr", result);
     free_tokens(root);
+    
+    
     return 0;
 }
