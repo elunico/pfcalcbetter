@@ -24,12 +24,16 @@ struct stack {
     struct stack *prev;
 };
 
+/// Implementation note: s must not be NULL but `*s` maybe be NULL
 void stack_push(struct stack **s, pfnum_t t);
 
+/// Implementation note: s must not be NULL but `*s` maybe be NULL
 pfnum_t stack_pop(struct stack **s);
 
-pfnum_t stack_peek(struct stack **s);
+/// Implementation note: s must not be NULL but `*s` maybe be NULL
+pfnum_t stack_peek(struct stack const *const *const s);
 
+/// Implementation note: s must not be NULL but `*s` maybe be NULL
 void stack_free(struct stack **s);
 
 #endif /* stack_h */

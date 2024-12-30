@@ -25,52 +25,55 @@ pfnum_t atopfnt(char const *s) {
 #endif
 }
 
+void process_token(char *tok, struct stack **s) {
+    if (isdigit(tok[0])) {
+        pfnum_t v = atol(tok);
+        stack_push(s, v);
+    } else if (ispunct(tok[0])) {
+        pfnum_t rhs = stack_pop(s);
+        if (rhs == MISSING_SENTINEL) {
+            assertionFailure("Too many operators");
+        }
+        pfnum_t lhs = stack_pop(s);
+        if (lhs == MISSING_SENTINEL) {
+            assertionFailure("Too many operators");
+        }
+        pfnum_t result;
+        if (tok[0] == '+') {
+            result = lhs + rhs;
+        } else if (tok[0] == '-') {
+            result = lhs - rhs;
+        } else if (tok[0] == '*') {
+            result = lhs * rhs;
+        } else if (tok[0] == '/') {
+            if (rhs == 0) {
+                assertionFailure("Division by 0");
+            }
+            result = lhs / rhs;
+        }
+#if defined(PF_NUM_LONG)
+        else if (tok[0] == '&') {
+            result = lhs & rhs;
+        } else if (tok[0] == '^') {
+            result = lhs ^ rhs;
+        } else if (tok[0] == '|') {
+            result = lhs | rhs;
+        }
+#endif
+        else {
+            assertionFailure("invalid operator");
+        }
+
+        debug("Step " PF_NUM_FMT " %s " PF_NUM_FMT " = " PF_NUM_FMT "\n", lhs, tok, rhs, result);
+        stack_push(s, result);
+    }
+}
+
 pfnum_t pfCalculate(struct token *tokens) {
     struct stack *s = NULL;
-    int stepCount = 0;
     while (tokens != NULL) {
         char *tok = tokens->value;
-        if (isdigit(tok[0])) {
-            pfnum_t v = atol(tok);
-            stack_push(&s, v);
-        } else if (ispunct(tok[0])) {
-            pfnum_t rhs = stack_pop(&s);
-            if (rhs == MISSING_SENTINEL) {
-                assertionFailure("Too many operators");
-            }
-            pfnum_t lhs = stack_pop(&s);
-            if (lhs == MISSING_SENTINEL) {
-                assertionFailure("Too many operators");
-            }
-            pfnum_t result;
-            if (tok[0] == '+') {
-                result = lhs + rhs;
-            } else if (tok[0] == '-') {
-                result = lhs - rhs;
-            } else if (tok[0] == '*') {
-                result = lhs * rhs;
-            } else if (tok[0] == '/') {
-                if (rhs == 0) {
-                    assertionFailure("Division by 0");
-                }
-                result = lhs / rhs;
-            }
-#if defined(PF_NUM_LONG)
-            else if (tok[0] == '&') {
-                result = lhs & rhs;
-            } else if (tok[0] == '^') {
-                result = lhs ^ rhs;
-            } else if (tok[0] == '|') {
-                result = lhs | rhs;
-            }
-#endif
-            else {
-                assertionFailure("invalid operator");
-            }
-
-            debug("Step %d: " PF_NUM_FMT " %s " PF_NUM_FMT " = " PF_NUM_FMT "\n", ++stepCount, lhs, tok, rhs, result);
-            stack_push(&s, result);
-        }
+        process_token(tok, &s);
         tokens = tokens->next;
     }
 
@@ -81,6 +84,21 @@ pfnum_t pfCalculate(struct token *tokens) {
     }
 
     return result;
+}
+
+void pfCalculate_r(struct token *t, struct stack **s, pfnum_t *result, int done) {
+    if (done) {
+        pfnum_t r = stack_pop(s);
+
+        if (stack_pop(s) != MISSING_SENTINEL) {
+            assertionFailure("Not enough operators");
+        }
+
+        *result = r;
+        return;
+    }
+    char *tok = t->value;
+    process_token(tok, s);
 }
 
 int main(int argc, char *const argv[]) {
@@ -101,15 +119,25 @@ int main(int argc, char *const argv[]) {
             assertionFailure("expected newline at end of input");
         }
         root = tokenize(line);
+        pfnum_t result = pfCalculate(root);
+        printf("%s = " PF_NUM_FMT "\n", "expr", result);
+        free_tokens(root);
     } else {
         FILE *f = fopen(args.filename, "r");
-        root = ftokenize(f);
+        struct token t = {0};
+        struct stack *s = {0};
+        pfnum_t result;
+        // TODO: this calls malloc a lot because each read to moved to a freshly
+        // allocated buffer. Maybe preallocate large chunks char * data then put
+        // the appropriate (aligned) pointer to each struct token object
+        while (ftokenize_r(&t, f) != NULL) {
+            pfCalculate_r(&t, &s, NULL, 0);
+        }
+        pfCalculate_r(NULL, &s, &result, 1);
+        printf("%s = " PF_NUM_FMT "\n", "expr", result);
+
         fclose(f);
     }
-
-    pfnum_t result = pfCalculate(root);
-    printf("%s = " PF_NUM_FMT "\n", "expr", result);
-    free_tokens(root);
 
     return 0;
 }

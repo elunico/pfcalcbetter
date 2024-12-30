@@ -1,4 +1,10 @@
 import random
+import argparse
+
+def parseargs():
+    a = argparse.ArgumentParser()
+    a.add_argument('count', type=int, help='Number of operations to include')
+    return a.parse_args()
 
 
 def random_operator():
@@ -37,4 +43,5 @@ def random_expr(len, filename):
             opwritten += 1
 
 
-random_expr(1000, "rin.txt")
+opts = parseargs()
+random_expr(opts.count, "rin.txt")

@@ -7,11 +7,20 @@
 
 #include "token.h"
 
-struct token *token_append(struct token **list, char const *s, size_t len) {
+void token_fill(struct token *tok, char const *s, size_t len) {
+    tok->value = malloc((len + 1) * sizeof(char));
+    memcpy(tok->value, s, len);
+    tok->value[len] = '\0';
+}
+
+struct token *token_new(char const *s, size_t len) {
     struct token *nextwalker = calloc(1, sizeof(struct token));
-    nextwalker->value = malloc((len + 1) * sizeof(char));
-    memcpy(nextwalker->value, s, len);
-    nextwalker->value[len] = '\0';
+    token_fill(nextwalker, s, len);
+    return nextwalker;
+}
+
+struct token *token_append(struct token **list, char const *s, size_t len) {
+    struct token *nextwalker = token_new(s, len);
     if (*list != NULL) {
         (*list)->next = nextwalker;
         nextwalker->prev = *list;
@@ -51,6 +60,32 @@ struct token *ftokenize(FILE *stream) {
     return root;
 }
 
+struct token *ftokenize_r(struct token *tok, FILE *stream) {
+    char buf[4096];
+    int idx = 0;
+    char c;
+    while (!feof(stream) && !ferror(stream)) {
+        while ((c = fgetc(stream)) != EOF && !isspace(c)) {
+            buf[idx++] = c;
+            if (idx == 4096) {
+                assertionFailure("Dynamic allocation not supported");
+            }
+        }
+
+        buf[idx] = 0;
+        if (idx > 0) {
+            if (tok == NULL) {
+                debug("%s\n", "Warning: tok is NULL");
+                return token_new(buf, idx);
+            }
+            token_fill(tok, buf, idx);
+            return tok;
+        }
+        idx = 0;
+    }
+    return NULL;
+}
+
 struct token *tokenize(char const *s) {
     struct token *root = NULL;
     struct token *walker = root;
@@ -63,10 +98,9 @@ struct token *tokenize(char const *s) {
             len++;
         }
         if (len > 0) {
+            token_append(&walker, start, len);
             if (root == NULL) {
-                root = token_append(&walker, start, len);
-            } else {
-                token_append(&walker, start, len);
+                root = walker;
             }
         }
         if (!*s) {
@@ -77,17 +111,18 @@ struct token *tokenize(char const *s) {
     return root;
 }
 
+void free_token(struct token *t) {
+    free(t->value);
+    free(t);
+}
+
 void free_tokens(struct token *tokens) {
     if (tokens == NULL)
         return;
 
-    while (tokens->next != NULL) {
-        tokens = tokens->next;
-    }
     while (tokens != NULL) {
-        struct token *p = tokens->prev;
-        free(tokens->value);
-        free(tokens);
+        struct token *p = tokens->next;
+        free_token(tokens);
         tokens = p;
     }
 }

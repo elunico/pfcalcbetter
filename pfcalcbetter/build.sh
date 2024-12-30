@@ -17,5 +17,7 @@ if [[ "$1" == "double" || "$2" == "double" ]]; then
     flags="$flags -DPF_NUM_DOUBLE"
 fi
 
+echo cc $flags *.c
+
 eval cc $flags *.c
 

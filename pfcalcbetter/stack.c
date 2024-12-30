@@ -32,7 +32,7 @@ pfnum_t stack_pop(struct stack **s) {
     return ret;
 }
 
-pfnum_t stack_peek(struct stack **s) {
+pfnum_t stack_peek(struct stack const *const *const s) {
     if (*s == NULL) {
         return MISSING_SENTINEL;
     }
@@ -40,5 +40,6 @@ pfnum_t stack_peek(struct stack **s) {
 }
 
 void stack_free(struct stack **s) {
-    while (stack_pop(s) != MISSING_SENTINEL);
+    while (stack_pop(s) != MISSING_SENTINEL)
+        ;
 }

@@ -14,8 +14,12 @@
         exit(1);                                                               \
     } while (0)
 
+#define STR_IMPL(x) #x
+#define STR(x) STR_IMPL(x)
+
 #ifndef NDEBUG
-#define debug(fmt, ...) printf(fmt, __VA_ARGS__)
+#define debug(fmt, ...)                                                        \
+    printf("[" __FILE__ ":" STR(__LINE__) "] " fmt, __VA_ARGS__)
 #else
 #define debug(...) (void)0
 #endif
@@ -33,6 +37,5 @@ typedef long pfnum_t;
 typedef double pfnum_t;
 #define PF_NUM_FMT "%lf"
 #endif
-
 
 #endif /* utils_h */
