@@ -16,9 +16,11 @@
 
 pfnum_t atopfnt(char const *s) {
 
-#if pfnum_t == long
+#if defined(PF_NUM_LONG)
     return atol(s);
-#elif pfnum_t == double;
+#elif defined(PF_NUM_DOUBLE)
+    return atof(s);
+#else
     return atof(s);
 #endif
 }
@@ -52,11 +54,21 @@ pfnum_t pfCalculate(struct token *tokens) {
                     assertionFailure("Division by 0");
                 }
                 result = lhs / rhs;
-            } else {
+            }
+#if defined(PF_NUM_LONG)
+            else if (tok[0] == '&') {
+                result = lhs & rhs;
+            } else if (tok[0] == '^') {
+                result = lhs ^ rhs;
+            } else if (tok[0] == '|') {
+                result = lhs | rhs;
+            }
+#endif
+            else {
                 assertionFailure("invalid operator");
             }
 
-            debug("Step %d: %lf %s %lf = %lf\n", ++stepCount, lhs, tok, rhs, result);
+            debug("Step %d: " PF_NUM_FMT " %s " PF_NUM_FMT " = " PF_NUM_FMT "\n", ++stepCount, lhs, tok, rhs, result);
             stack_push(&s, result);
         }
         tokens = tokens->next;
@@ -96,7 +108,7 @@ int main(int argc, char *const argv[]) {
     }
 
     pfnum_t result = pfCalculate(root);
-    printf("%s = %lf\n", "expr", result);
+    printf("%s = " PF_NUM_FMT "\n", "expr", result);
     free_tokens(root);
 
     return 0;
