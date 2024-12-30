@@ -8,7 +8,7 @@
 #include "token.h"
 
 struct token *token_append(struct token **list, char const *s, size_t len) {
-    struct token * nextwalker = calloc(1, sizeof(struct token));
+    struct token *nextwalker = calloc(1, sizeof(struct token));
     nextwalker->value = malloc((len + 1) * sizeof(char));
     memcpy(nextwalker->value, s, len);
     nextwalker->value[len] = '\0';
@@ -24,7 +24,7 @@ struct token *token_append(struct token **list, char const *s, size_t len) {
     }
 }
 
-struct token* ftokenize(FILE *stream) {
+struct token *ftokenize(FILE *stream) {
     struct token *root = NULL;
     struct token *walker = root;
     char buf[4096];
@@ -37,7 +37,7 @@ struct token* ftokenize(FILE *stream) {
                 assertionFailure("Dynamic allocation not supported");
             }
         }
-        
+
         buf[idx] = 0;
         if (idx > 0) {
             if (root == NULL) {
@@ -51,7 +51,7 @@ struct token* ftokenize(FILE *stream) {
     return root;
 }
 
-struct token* tokenize(char const *s) {
+struct token *tokenize(char const *s) {
     struct token *root = NULL;
     struct token *walker = root;
     char const *start = s;
@@ -77,9 +77,10 @@ struct token* tokenize(char const *s) {
     return root;
 }
 
-void free_tokens(struct token* tokens) {
-    if (tokens == NULL) return;
-    
+void free_tokens(struct token *tokens) {
+    if (tokens == NULL)
+        return;
+
     while (tokens->next != NULL) {
         tokens = tokens->next;
     }

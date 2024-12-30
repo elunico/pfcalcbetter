@@ -8,10 +8,9 @@
 #ifndef stack_h
 #define stack_h
 
+#include "utils.h"
 #include <stdlib.h>
 #include <string.h>
-#include "utils.h"
-
 
 #if pfnum_t == long
 #define MISSING_SENTINEL __LONG_MAX__

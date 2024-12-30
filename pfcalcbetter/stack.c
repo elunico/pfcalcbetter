@@ -22,8 +22,9 @@ void stack_push(struct stack **s, pfnum_t t) {
 }
 
 pfnum_t stack_pop(struct stack **s) {
-    if (*s == NULL) return MISSING_SENTINEL;
-    
+    if (*s == NULL)
+        return MISSING_SENTINEL;
+
     pfnum_t ret = (*s)->rToken;
     struct stack *root = (*s)->prev;
     free(*s);

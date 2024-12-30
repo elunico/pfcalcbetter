@@ -5,23 +5,22 @@
 //  Created by Thomas Povinelli on 12/28/24.
 //
 
-#include <stdio.h>
 #include <ctype.h>
 #include <math.h>
-#include <unistd.h>
+#include <stdio.h>
 
-#include "token.h"
+#include "args.h"
 #include "stack.h"
+#include "token.h"
 #include "utils.h"
 
 pfnum_t atopfnt(char const *s) {
-    
+
 #if pfnum_t == long
     return atol(s);
 #elif pfnum_t == double;
     return atof(s);
 #endif
-    
 }
 
 pfnum_t pfCalculate(struct token *tokens) {
@@ -56,80 +55,30 @@ pfnum_t pfCalculate(struct token *tokens) {
             } else {
                 assertionFailure("invalid operator");
             }
-#ifndef NDEBUG
-            printf("Step %d: %lf %s %lf = %lf\n", ++stepCount, lhs, tok, rhs, result);
-#endif
+
+            debug("Step %d: %lf %s %lf = %lf\n", ++stepCount, lhs, tok, rhs, result);
             stack_push(&s, result);
         }
         tokens = tokens->next;
     }
-    
+
     pfnum_t result = stack_pop(&s);
-    
+
     if (stack_pop(&s) != MISSING_SENTINEL) {
         assertionFailure("Not enough operators");
     }
-    
+
     return result;
 }
 
-struct arguments {
-    int isStdin;
-    char *filename;
-};
-
-struct arguments parseargs(int argc, char * const argv[]) {
-    struct arguments args = {0};
-    int c;
-    int didSet = 0;
-    while ((c = getopt(argc, argv, "if:")) != -1) {
-        int this_option_optind = optind ? optind : 1;
-        switch (c) {
-            case 'i': {
-                if (didSet) {
-                    assertionFailure("Choose either -i for -f FILE not both");
-                }
-                args.isStdin = 1;
-                args.filename = NULL;
-                didSet = 1;
-                break;
-            }
-            case 'f': {
-                if (didSet) {
-                    assertionFailure("Choose either -i for -f FILE not both");
-                }
-                args.isStdin = 0;
-                args.filename = optarg;
-                didSet = 1;
-                break;
-            }
-            case '?':
-                break;
-            default:
-                printf ("?? getopt returned character code 0%o ??\n", c);
-        }
-    }
-    if (optind < argc) {
-        printf ("non-option ARGV-elements: ");
-        while (optind < argc) {
-            printf ("%s ", argv[optind++]);
-        }
-        printf ("\n");
-    }
-    return args;
-}
-
-int main(int argc, char * const argv[]) {
-    
-
-    
+int main(int argc, char *const argv[]) {
     struct arguments args = parseargs(argc, argv);
-    
+
     if (!args.isStdin && !args.filename) {
         assertionFailure("Specify -i or -f FILE\n");
     }
-    
-    struct token * root;
+
+    struct token *root;
     if (args.isStdin) {
         printf("Please enter a postfix expression: ");
         size_t lineSize;
@@ -149,7 +98,6 @@ int main(int argc, char * const argv[]) {
     pfnum_t result = pfCalculate(root);
     printf("%s = %lf\n", "expr", result);
     free_tokens(root);
-    
-    
+
     return 0;
 }
