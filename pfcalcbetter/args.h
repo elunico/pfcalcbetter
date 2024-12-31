@@ -15,6 +15,9 @@ struct arguments {
     char *filename;
 };
 
-struct arguments parseargs(int argc, char *const argv[]);
+/// Implementation note: caller must free return value
+struct arguments *arguments_parse(int argc, char *const argv[]);
+
+void arguments_free(struct arguments *args);
 
 #endif /* args_h */

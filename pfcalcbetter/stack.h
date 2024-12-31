@@ -11,10 +11,11 @@
 #include "utils.h"
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
-#if pfnum_t == long
+#if defined(PF_NUM_LONG)
 #define MISSING_SENTINEL __LONG_MAX__
-#elif pfnum_t == double;
+#else
 #define MISSING_SENTINEL NAN
 #endif
 

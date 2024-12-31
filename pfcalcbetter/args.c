@@ -10,8 +10,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-struct arguments parseargs(int argc, char *const argv[]) {
-    struct arguments args = {0};
+struct arguments *arguments_parse(int argc, char *const argv[]) {
+    struct arguments *args = calloc(1, sizeof(struct arguments));
     int c;
     int didSet = 0;
     while ((c = getopt(argc, argv, "if:")) != -1) {
@@ -19,26 +19,25 @@ struct arguments parseargs(int argc, char *const argv[]) {
         switch (c) {
         case 'i': {
             if (didSet) {
-                assertionFailure("Choose either -i for -f FILE not both");
+                fail("Choose either -i for -f FILE not both");
             }
-            args.isStdin = 1;
-            args.filename = NULL;
+            args->isStdin = 1;
+            args->filename = NULL;
             didSet = 1;
             break;
         }
         case 'f': {
             if (didSet) {
-                assertionFailure("Choose either -i for -f FILE not both");
+                fail("Choose either -i for -f FILE not both");
             }
-            args.isStdin = 0;
-            args.filename = optarg;
+            args->isStdin = 0;
+            args->filename = optarg;
             didSet = 1;
             break;
         }
         case '?':
-            break;
         default:
-            printf("?? getopt returned character code 0%o ??\n", c);
+                failf("?? getopt returned character code 0%o ??\n", c);
         }
     }
     if (optind < argc) {
@@ -46,7 +45,11 @@ struct arguments parseargs(int argc, char *const argv[]) {
         while (optind < argc) {
             printf("%s ", argv[optind++]);
         }
-        assertionFailure("\n");
+        fail("\n");
     }
     return args;
+}
+
+void arguments_free(struct arguments *args) {
+    free(args);
 }

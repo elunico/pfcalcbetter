@@ -19,21 +19,20 @@ struct token *token_new(char const *s, size_t len) {
     return nextwalker;
 }
 
-struct token *token_append(struct token **list, char const *s, size_t len) {
-    struct token *nextwalker = token_new(s, len);
+struct token *token_append(struct token **list, struct token *newtok) {
     if (*list != NULL) {
-        (*list)->next = nextwalker;
-        nextwalker->prev = *list;
-        *list = nextwalker;
-        return nextwalker;
+        (*list)->next = newtok;
+        newtok->prev = *list;
+        *list = newtok;
+        return newtok;
     } else {
-        *list = nextwalker;
-        nextwalker->prev = NULL;
-        return nextwalker;
+        *list = newtok;
+        newtok->prev = NULL;
+        return newtok;
     }
 }
 
-struct token *ftokenize(FILE *stream) {
+struct token *token_ftokenize(FILE *stream) {
     struct token *root = NULL;
     struct token *walker = root;
     char buf[4096];
@@ -43,16 +42,17 @@ struct token *ftokenize(FILE *stream) {
         while ((c = fgetc(stream)) != EOF && !isspace(c)) {
             buf[idx++] = c;
             if (idx == 4096) {
-                assertionFailure("Dynamic allocation not supported");
+                fail("Dynamic allocation not supported");
             }
         }
 
         buf[idx] = 0;
         if (idx > 0) {
+            struct token *next = token_new(buf, idx);
             if (root == NULL) {
-                root = token_append(&walker, buf, idx);
+                root = token_append(&walker, next);
             } else {
-                token_append(&walker, buf, idx);
+                token_append(&walker, next);
             }
         }
         idx = 0;
@@ -60,7 +60,7 @@ struct token *ftokenize(FILE *stream) {
     return root;
 }
 
-struct token *ftokenize_r(struct token *tok, FILE *stream) {
+struct token *token_ftokenize_r(struct token *tok, FILE *stream) {
     char buf[4096];
     int idx = 0;
     char c;
@@ -68,7 +68,7 @@ struct token *ftokenize_r(struct token *tok, FILE *stream) {
         while ((c = fgetc(stream)) != EOF && !isspace(c)) {
             buf[idx++] = c;
             if (idx == 4096) {
-                assertionFailure("Dynamic allocation not supported");
+                fail("Dynamic allocation not supported");
             }
         }
 
@@ -86,7 +86,7 @@ struct token *ftokenize_r(struct token *tok, FILE *stream) {
     return NULL;
 }
 
-struct token *tokenize(char const *s) {
+struct token *token_tokenize(char const *s) {
     struct token *root = NULL;
     struct token *walker = root;
     char const *start = s;
@@ -98,7 +98,8 @@ struct token *tokenize(char const *s) {
             len++;
         }
         if (len > 0) {
-            token_append(&walker, start, len);
+            struct token *tok = token_new(start, len);
+            token_append(&walker, tok);
             if (root == NULL) {
                 root = walker;
             }
@@ -111,18 +112,18 @@ struct token *tokenize(char const *s) {
     return root;
 }
 
-void free_token(struct token *t) {
+void token_free(struct token *t) {
     free(t->value);
     free(t);
 }
 
-void free_tokens(struct token *tokens) {
+void token_freeall(struct token *tokens) {
     if (tokens == NULL)
         return;
 
     while (tokens != NULL) {
         struct token *p = tokens->next;
-        free_token(tokens);
+        token_free(tokens);
         tokens = p;
     }
 }

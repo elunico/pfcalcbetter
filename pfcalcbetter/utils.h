@@ -8,9 +8,12 @@
 #ifndef utils_h
 #define utils_h
 
-#define assertionFailure(msg)                                                  \
+#define fail(msg)                                                  \
+    failf("%s\n", msg)
+
+#define failf(fmt, ...)                                            \
     do {                                                                       \
-        fprintf(stderr, msg);                                                  \
+        fprintf(stderr, fmt, __VA_ARGS__);                                     \
         exit(1);                                                               \
     } while (0)
 
