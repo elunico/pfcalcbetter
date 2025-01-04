@@ -9,15 +9,11 @@
 #define stack_h
 
 #include "utils.h"
+#include <math.h>
 #include <stdlib.h>
 #include <string.h>
-#include <math.h>
 
-#if defined(PF_NUM_LONG)
-#define MISSING_SENTINEL __LONG_MAX__
-#else
-#define MISSING_SENTINEL NAN
-#endif
+int ISEMPTY(pfnum_t stackresult);
 
 struct stack {
     pfnum_t rToken;

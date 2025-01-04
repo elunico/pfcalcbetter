@@ -8,24 +8,33 @@
 #ifndef utils_h
 #define utils_h
 
-#define fail(msg)                                                  \
-    failf("%s\n", msg)
+#ifndef NDEBUG
+#define debug(fmt, ...)                                                        \
+    printf("[" __FILE__ ":" STR(__LINE__) "] " fmt, __VA_ARGS__)
 
-#define failf(fmt, ...)                                            \
+#define throw_halt(n) abort()
+#else
+#define debug(...) (void)0
+#define throw_halt(n) exit(n)
+#endif
+
+
+#define fail(msg)                                                              \
     do {                                                                       \
-        fprintf(stderr, fmt, __VA_ARGS__);                                     \
-        exit(1);                                                               \
+        fputs("[" __FILE__ ":" STR(__LINE__) "] \n" msg, stderr);                \
+        throw_halt(2);                                                          \
+    } while (0)
+
+#define failf(fmt, ...)                                                        \
+    do {                                                                       \
+        fprintf(stderr, "[" __FILE__ ":" STR(__LINE__) "] \n" fmt, __VA_ARGS__); \
+        throw_halt(2);                                                          \
     } while (0)
 
 #define STR_IMPL(x) #x
 #define STR(x) STR_IMPL(x)
 
-#ifndef NDEBUG
-#define debug(fmt, ...)                                                        \
-    printf("[" __FILE__ ":" STR(__LINE__) "] " fmt, __VA_ARGS__)
-#else
-#define debug(...) (void)0
-#endif
+
 
 #if defined(PF_NUM_LONG) && defined(PF_NUM_DOUBLE)
 #error "Conflicting types for pfnum_t"
@@ -39,6 +48,21 @@ typedef long pfnum_t;
 #warning "no explicit type defined for pfnum_t. default is double"
 typedef double pfnum_t;
 #define PF_NUM_FMT "%lf"
+#endif
+
+#ifdef __DARWIN_C_LEVEL
+#define readline(declvar, stream, len) declvar = fgetln(stream, &len)
+#else
+#define readline(declvar, stream, len) len = getline(&declvar, &len, stream)
+#endif
+
+#ifndef REQUIRE_NO_CHECKS
+#define require(condition, message)                                            \
+    if (!(condition)) {                                                        \
+        fail("requirement not satisfied: " #condition message);                \
+    }
+#else
+#define require(condition, message) (void)0;
 #endif
 
 #endif /* utils_h */

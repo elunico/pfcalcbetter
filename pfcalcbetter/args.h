@@ -10,6 +10,12 @@
 
 #include <unistd.h>
 
+typedef const unsigned long long volatile * const volatile * const volatile scullvp;
+
+static const unsigned long long volatile * const volatile * const volatile v;
+
+static scullvp x;
+
 struct arguments {
     int isStdin;
     char *filename;

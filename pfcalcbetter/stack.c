@@ -7,7 +7,20 @@
 
 #include "stack.h"
 
+#if defined(PF_NUM_LONG)
+#define MISSING_SENTINEL __LONG_MAX__
+#else
+#define MISSING_SENTINEL NAN
+#endif
+
+#if defined(PF_NUM_LONG)
+int ISEMPTY(pfnum_t stackresult) { return ((stackresult) == __LONG_MAX__); }
+#else
+int ISEMPTY(pfnum_t stackresult) { return isnan(stackresult); }
+#endif
+
 void stack_push(struct stack **s, pfnum_t t) {
+    
     if (*s == NULL) {
         *s = malloc(sizeof(struct stack));
         (*s)->rToken = t;
@@ -40,6 +53,6 @@ pfnum_t stack_peek(struct stack const *const *const s) {
 }
 
 void stack_free(struct stack **s) {
-    while (stack_pop(s) != MISSING_SENTINEL)
+    while (!ISEMPTY(stack_pop(s)))
         ;
 }

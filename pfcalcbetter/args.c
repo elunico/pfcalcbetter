@@ -9,6 +9,7 @@
 #include "utils.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 struct arguments *arguments_parse(int argc, char *const argv[]) {
     struct arguments *args = calloc(1, sizeof(struct arguments));
@@ -31,7 +32,7 @@ struct arguments *arguments_parse(int argc, char *const argv[]) {
                 fail("Choose either -i for -f FILE not both");
             }
             args->isStdin = 0;
-            args->filename = optarg;
+            args->filename = strdup(optarg);
             didSet = 1;
             break;
         }
@@ -51,5 +52,6 @@ struct arguments *arguments_parse(int argc, char *const argv[]) {
 }
 
 void arguments_free(struct arguments *args) {
+    free(args->filename);
     free(args);
 }

@@ -30,12 +30,13 @@ void process_token(char *tok, struct stack **s) {
         pfnum_t v = atol(tok);
         stack_push(s, v);
     } else if (ispunct(tok[0])) {
+        require(strlen(tok) == 1, "operator must be of length 1");
         pfnum_t rhs = stack_pop(s);
-        if (rhs == MISSING_SENTINEL) {
+        if (ISEMPTY(rhs)) {
             fail("Too many operators");
         }
         pfnum_t lhs = stack_pop(s);
-        if (lhs == MISSING_SENTINEL) {
+        if (ISEMPTY(lhs)) {
             fail("Too many operators");
         }
         pfnum_t result;
@@ -47,7 +48,11 @@ void process_token(char *tok, struct stack **s) {
             result = lhs * rhs;
         } else if (tok[0] == '/') {
             if (rhs == 0) {
+#ifdef PFCALC_PREVENT_ZERO_DIV
+                rhs = 1;
+#else
                 fail("Division by 0");
+#endif
             }
             result = lhs / rhs;
         }
@@ -56,7 +61,7 @@ void process_token(char *tok, struct stack **s) {
             if (rhs == 0) {
                 fail("Division by 0");
             }
-            result = lhs % rhs
+            result = lhs % rhs;
         } else if (tok[0] == '&') {
             result = lhs & rhs;
         } else if (tok[0] == '^') {
@@ -66,11 +71,13 @@ void process_token(char *tok, struct stack **s) {
         }
 #endif
         else {
-            failf("invalid operator: '%s'\n", tok);
+            failf("invalid operator: '%s'", tok);
         }
 
         debug("Step " PF_NUM_FMT " %s " PF_NUM_FMT " = " PF_NUM_FMT "\n", lhs, tok, rhs, result);
         stack_push(s, result);
+    } else {
+        failf("Unrecognized token: %s", tok);
     }
 }
 
@@ -83,8 +90,8 @@ pfnum_t pfCalculate(struct token *tokens) {
     }
 
     pfnum_t result = stack_pop(&s);
-
-    if (stack_pop(&s) != MISSING_SENTINEL) {
+    
+    if (!ISEMPTY(stack_pop(&s))) {
         fail("Not enough operators");
     }
 
@@ -95,7 +102,7 @@ void pfCalculate_r(struct token *t, struct stack **s, pfnum_t *result, int done)
     if (done) {
         pfnum_t r = stack_pop(s);
 
-        if (stack_pop(s) != MISSING_SENTINEL) {
+        if (!ISEMPTY(stack_pop(s))) {
             fail("Not enough operators");
         }
 
@@ -110,20 +117,23 @@ int main(int argc, char *const argv[]) {
     struct arguments *args = arguments_parse(argc, argv);
 
     if (!args->isStdin && !args->filename) {
-        fail("Specify -i or -f FILE\n");
+        fail("Specify -i or -f FILE");
     }
 
     struct token *root;
     if (args->isStdin) {
         printf("Please enter a postfix expression: ");
-        size_t lineSize;
-        char *line = fgetln(stdin, &lineSize);
+        size_t lineSize = 0;
+        char *line = NULL;
+        readline(line, stdin, lineSize);
         if (line[lineSize - 1] == '\n') {
             line[lineSize - 1] = '\0';
         } else {
             fail("expected newline at end of input");
         }
-        root =token_tokenize(line);
+        printf("Line: %s\n", line);
+        root = token_tokenize(line);
+        free(line);
         pfnum_t result = pfCalculate(root);
         printf("%s = " PF_NUM_FMT "\n", "expr", result);
         token_freeall(root);
@@ -137,6 +147,7 @@ int main(int argc, char *const argv[]) {
         // the appropriate (aligned) pointer to each struct token object
         while (token_ftokenize_r(&t, f) != NULL) {
             pfCalculate_r(&t, &s, NULL, 0);
+            free(t.value);
         }
         pfCalculate_r(NULL, &s, &result, 1);
         printf("%s = " PF_NUM_FMT "\n", "expr", result);
