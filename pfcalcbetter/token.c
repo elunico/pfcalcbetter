@@ -7,15 +7,33 @@
 
 #include "token.h"
 
-void token_fill(struct token *tok, char const *s, size_t len) {
+void token_fill(struct token *tok, char const *start, size_t len) {
     tok->value = malloc((len + 1) * sizeof(char));
+    memcpy(tok->value, start, len);
+    tok->value[len] = '\0';
+}
+
+struct token *token_new(char const *start, size_t len) {
+    struct token *nextwalker = calloc(1, sizeof(struct token));
+    token_fill(nextwalker, start, len);
+    return nextwalker;
+}
+
+void token_fill_a(struct arena_block *arena, struct token *tok, char const *s,
+                  size_t len) {
+    tok->value = arena_block_alloc(arena, sizeof(char) * (len + 1));
+    if (tok->value == NULL) {
+        abort();
+    }
     memcpy(tok->value, s, len);
     tok->value[len] = '\0';
 }
 
-struct token *token_new(char const *s, size_t len) {
-    struct token *nextwalker = calloc(1, sizeof(struct token));
-    token_fill(nextwalker, s, len);
+struct token *token_new_a(struct arena_block *arena, char const *s,
+                          size_t len) {
+    struct token *nextwalker = arena_block_alloc(arena, sizeof(struct token));
+    // struct token* nextwalker = calloc(1, sizeof(struct token));
+    token_fill_a(arena, nextwalker, s, len);
     return nextwalker;
 }
 
@@ -79,6 +97,36 @@ struct token *token_ftokenize_r(struct token *tok, FILE *stream) {
                 return token_new(buf, idx);
             }
             token_fill(tok, buf, idx);
+            return tok;
+        }
+        idx = 0;
+    }
+    return NULL;
+}
+
+struct token *token_ftokenize_ar(struct arena_block *arena, struct token *tok,
+                                 FILE *stream) {
+    char buf[4096];
+    int idx = 0;
+    char c;
+    while (!feof(stream) && !ferror(stream)) {
+        while ((c = fgetc(stream)) != EOF && !isspace(c)) {
+            buf[idx++] = c;
+            if (c == 0) {
+                fail("c is zero");
+            }
+            if (idx == 4096) {
+                fail("Dynamic allocation not supported");
+            }
+        }
+
+        buf[idx] = 0;
+        if (idx > 0) {
+            if (tok == NULL) {
+                debug("%s\n", "Warning: tok is NULL");
+                return token_new_a(arena, buf, idx);
+            }
+            token_fill_a(arena, tok, buf, idx);
             return tok;
         }
         idx = 0;

@@ -8,7 +8,10 @@
 #ifndef utils_h
 #define utils_h
 
-#ifndef NDEBUG
+#include <stdio.h>
+#include <stdlib.h>
+
+#if !defined(NDEBUG) && !defined(NOPRINT)
 #define debug(fmt, ...)                                                        \
     printf("[" __FILE__ ":" STR(__LINE__) "] " fmt, __VA_ARGS__)
 
@@ -18,23 +21,20 @@
 #define throw_halt(n) exit(n)
 #endif
 
-
 #define fail(msg)                                                              \
     do {                                                                       \
-        fputs("[" __FILE__ ":" STR(__LINE__) "] \n" msg, stderr);                \
-        throw_halt(2);                                                          \
+        fputs("[" __FILE__ ":" STR(__LINE__) "]" msg, stderr);                 \
+        throw_halt(2);                                                         \
     } while (0)
 
 #define failf(fmt, ...)                                                        \
     do {                                                                       \
-        fprintf(stderr, "[" __FILE__ ":" STR(__LINE__) "] \n" fmt, __VA_ARGS__); \
-        throw_halt(2);                                                          \
+        fprintf(stderr, "[" __FILE__ ":" STR(__LINE__) "]" fmt, __VA_ARGS__);  \
+        throw_halt(2);                                                         \
     } while (0)
 
 #define STR_IMPL(x) #x
 #define STR(x) STR_IMPL(x)
-
-
 
 #if defined(PF_NUM_LONG) && defined(PF_NUM_DOUBLE)
 #error "Conflicting types for pfnum_t"
@@ -63,6 +63,14 @@ typedef double pfnum_t;
     }
 #else
 #define require(condition, message) (void)0;
+#endif
+
+pfnum_t safe_op(pfnum_t lhs, pfnum_t rhs,
+                pfnum_t (*operation)(pfnum_t, pfnum_t));
+
+pfnum_t divide(pfnum_t lhs, pfnum_t rhs);
+#if defined(PF_NUM_LONG)
+pfnum_t modulo(pfnum_t lhs, pfnum_t rhs);
 #endif
 
 #endif /* utils_h */

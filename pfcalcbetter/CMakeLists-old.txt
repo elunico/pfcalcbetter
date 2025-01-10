@@ -1,0 +1,31 @@
+cmake_minimum_required(VERSION 3.20)
+
+project(pfcalc)
+
+include_directories('.')
+
+# add the ability to add flags when make debug is used
+set(CMAKE_C_FLAGS_DEBUG "-g -Og -Wall -Wextra -pedantic -Werror -DNOPRINT")
+set(CMAKE_C_FLAGS_RELEASE "-O3 -Wall -Wextra -pedantic -Werror -DNDEBUG")
+
+# add the flag to define PF_NO_ZDIV if the no zdiv flag is set
+if (PF_NO_ZDIV)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DPF_NO_ZDIV")
+endif()
+
+# add the flag to CMAKE_C_FLAGS if the user passes -double argument
+if (PF_DOUBLE)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DPF_DOUBLE")
+endif()
+
+# and the same for -long
+if (PF_LONG)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DPF_LONG")
+endif()
+
+# but if both are set that should be an error
+if (PF_DOUBLE AND PF_LONG)
+    message(FATAL_ERROR "PF_DOUBLE and PF_LONG cannot be set at the same time")
+endif()
+
+add_executable(main args.c arena.c main.c stack.c token.c)

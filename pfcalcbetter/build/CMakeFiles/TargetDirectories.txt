@@ -1,0 +1,4 @@
+/Users/thomaspovinelli/Developer/scratch/pfcalcbetter/pfcalcbetter/build/CMakeFiles/main.dir
+/Users/thomaspovinelli/Developer/scratch/pfcalcbetter/pfcalcbetter/build/CMakeFiles/atest.dir
+/Users/thomaspovinelli/Developer/scratch/pfcalcbetter/pfcalcbetter/build/CMakeFiles/edit_cache.dir
+/Users/thomaspovinelli/Developer/scratch/pfcalcbetter/pfcalcbetter/build/CMakeFiles/rebuild_cache.dir

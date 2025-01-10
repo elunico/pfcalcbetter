@@ -1,0 +1,24 @@
+{
+    "editor.tokenColorCustomizations": {
+        "[Catppuccin Mocha]": {
+            "textMateRules": [
+                {
+                    "name": "entity.name.function",
+                    "scope": "entity.name.function",
+                    "settings": {
+                        "fontStyle": ""
+                    }
+                },
+                {
+                    "name": "entity.name.type",
+                    "scope": "entity.name.type",
+                    "settings": {
+                        "fontStyle": ""
+                    }
+                }
+            ]
+        },
+        "comments": "",
+        "textMateRules": []
+    }
+}

@@ -3,7 +3,7 @@
 flags="-o main -I."
 
 if [[ "$1" == "debug" || "$2" == "debug" || "$3" == "debug" ]]; then
-    flags="$flags -g"
+    flags="$flags -g -DNOPRINT"
 else
     flags="$flags -DNDEBUG"
 fi
