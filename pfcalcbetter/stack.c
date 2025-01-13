@@ -14,55 +14,53 @@ int ISEMPTY(pfnum_t stackresult) { return ((stackresult) == __LONG_MAX__); }
 int ISEMPTY(pfnum_t stackresult) { return isnan(stackresult); }
 #endif
 
-void stack_push(struct stack **s, pfnum_t t) {
-
+static void stack_push_alloca(struct stack **s, pfnum_t const res, struct stack *result) {
     if (*s == NULL) {
-        *s = malloc(sizeof(struct stack));
-        (*s)->rToken = t;
+        *s = result;
+        (*s)->rToken = res;
         (*s)->next = NULL;
         (*s)->prev = NULL;
     } else {
-        (*s)->next = malloc(sizeof(struct stack));
-        (*s)->next->rToken = t;
+        (*s)->next = result;
+        (*s)->next->rToken = res;
         (*s)->next->prev = *s;
         *s = (*s)->next;
     }
 }
 
-pfnum_t stack_pop(struct stack **s) {
+void stack_push(struct stack **s, pfnum_t const t) {
+    void *result = malloc(sizeof(struct stack));
+    return stack_push_alloca(s, t, result);
+}
+
+void stack_push_a(struct arena *arena, struct stack **s, pfnum_t const t) {
+    void *result = arena_block_alloc(arena, sizeof(struct stack));
+    return stack_push_alloca(s, t, result);
+}
+
+static pfnum_t stack_pop_inout(struct stack **s, struct stack **tofree) {
     if (*s == NULL)
         return MISSING_SENTINEL;
 
     pfnum_t ret = (*s)->rToken;
     struct stack *root = (*s)->prev;
-    free(*s);
+    // free(*s);
+    *tofree = *s;
     *s = root;
     return ret;
 }
 
-void stack_push_a(struct arena_block *arena, struct stack **s, pfnum_t t) {
-
-    if (*s == NULL) {
-        *s = arena_block_alloc(arena, sizeof(struct stack));
-        (*s)->rToken = t;
-        (*s)->next = NULL;
-        (*s)->prev = NULL;
-    } else {
-        (*s)->next = arena_block_alloc(arena, sizeof(struct stack));
-        (*s)->next->rToken = t;
-        (*s)->next->prev = *s;
-        *s = (*s)->next;
-    }
+pfnum_t stack_pop(struct stack **s) {
+    struct stack *tofree = NULL;
+    pfnum_t ret = stack_pop_inout(s, &tofree);
+    free(tofree);
+    return ret;
 }
 
-pfnum_t stack_pop_a(struct arena_block *arena, struct stack **s) {
-    if (*s == NULL)
-        return MISSING_SENTINEL;
-
-    pfnum_t ret = (*s)->rToken;
-    struct stack *root = (*s)->prev;
-    arena_block_free(arena, *s);
-    *s = root;
+pfnum_t stack_pop_a(struct arena *arena, struct stack **s) {
+    struct stack *tofree;
+    pfnum_t ret = stack_pop_inout(s, &tofree);
+    arena_block_free(arena, tofree);
     return ret;
 }
 

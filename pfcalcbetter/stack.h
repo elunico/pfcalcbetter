@@ -34,9 +34,9 @@ void stack_push(struct stack **s, pfnum_t t);
 /// Implementation note: s must not be NULL but `*s` maybe be NULL
 pfnum_t stack_pop(struct stack **s);
 
-void stack_push_a(struct arena_block *arena, struct stack **s, pfnum_t t);
+void stack_push_a(struct arena *arena, struct stack **s, pfnum_t t);
 
-pfnum_t stack_pop_a(struct arena_block *arena, struct stack **s);
+pfnum_t stack_pop_a(struct arena *arena, struct stack **s);
 
 /// Implementation note: s must not be NULL but `*s` maybe be NULL
 pfnum_t stack_peek(struct stack const *const *const s);

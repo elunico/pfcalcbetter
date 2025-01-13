@@ -30,33 +30,32 @@ struct arguments *arguments_parse(int argc, char *const argv[]) {
     int c;
     int didSet = 0;
     while ((c = getopt(argc, argv, "if:")) != -1) {
-        int this_option_optind = optind ? optind : 1;
         switch (c) {
         case 'i': {
             if (didSet)
-                fail("Choose either -i for -f FILE not both");
+                fatal("Choose either -i for -f FILE not both");
             args->filename = (char *)(~0);
             didSet = 1;
             break;
         }
         case 'f': {
             if (didSet)
-                fail("Choose either -i for -f FILE not both");
+                fatal("Choose either -i for -f FILE not both");
             args->filename = strdup(optarg);
             didSet = 1;
             break;
         }
         case '?':
         default:
-            failf("?? getopt returned character code 0%o ??\n", c);
+            fatalf("?? getopt returned character code 0%o ??\n", c);
         }
     }
     if (optind < argc) {
-        printf("Unrecognized arguments: ");
+        error("Unrecognized arguments: ");
         while (optind < argc) {
-            printf("%s ", argv[optind++]);
+            error("%s ", argv[optind++]);
         }
-        fail("\n");
+        fatal("\n");
     }
     return args;
 }

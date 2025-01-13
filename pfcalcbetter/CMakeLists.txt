@@ -18,14 +18,18 @@ add_executable(atest atest.c arena.c stack.c)
 # Add include directories
 include_directories(.)
 
-option(DEBUG "debug mode" OFF)
+option(DEBUG "debug build mode" OFF)
 if (DEBUG)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g")
-    # add_compile_definitions(NOPRINT)
-else() 
+else()
     add_compile_definitions(NDEBUG)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3")
 endif()
+
+option(PRINT "debug print mode" 0)
+
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DPRINT=${PRINT}")
+
 
 # Add optional compilation flags
 option(LONG "Use long type" OFF)

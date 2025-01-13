@@ -1,0 +1,11 @@
+.cmake
+cmake_install.cmake
+CMakeCache.txt
+build.ninja
+CMakeFiles
+.vscode
+.ninja*
+atest
+main
+build/
+Testing/

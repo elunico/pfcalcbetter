@@ -15,11 +15,14 @@ void token_fill(struct token *tok, char const *start, size_t len) {
 
 struct token *token_new(char const *start, size_t len) {
     struct token *nextwalker = calloc(1, sizeof(struct token));
+    if (!nextwalker) {
+        return NULL;
+    }
     token_fill(nextwalker, start, len);
     return nextwalker;
 }
 
-void token_fill_a(struct arena_block *arena, struct token *tok, char const *s,
+void token_fill_a(struct arena *arena, struct token *tok, char const *s,
                   size_t len) {
     tok->value = arena_block_alloc(arena, sizeof(char) * (len + 1));
     if (tok->value == NULL) {
@@ -29,15 +32,18 @@ void token_fill_a(struct arena_block *arena, struct token *tok, char const *s,
     tok->value[len] = '\0';
 }
 
-struct token *token_new_a(struct arena_block *arena, char const *s,
-                          size_t len) {
+struct token *token_new_a(struct arena *arena, char const *s, size_t len) {
     struct token *nextwalker = arena_block_alloc(arena, sizeof(struct token));
     // struct token* nextwalker = calloc(1, sizeof(struct token));
+    if (!nextwalker) {
+        return NULL;
+    }
     token_fill_a(arena, nextwalker, s, len);
     return nextwalker;
 }
 
 struct token *token_append(struct token **list, struct token *newtok) {
+    require(newtok != NULL);
     if (*list != NULL) {
         (*list)->next = newtok;
         newtok->prev = *list;
@@ -50,19 +56,42 @@ struct token *token_append(struct token **list, struct token *newtok) {
     }
 }
 
+void get_next_token(FILE *stream, char **buf, int *idx, size_t *cap) {
+    int c;
+    while ((c = fgetc(stream)) != EOF && !isspace(c)) {
+        (*buf)[(*idx)++] = c;
+        if (*idx == *cap) {
+            // fatal("Dynamic allocation not supported");
+            char *old = *buf;
+            if (*cap == 4096) {
+                info("malloc called for extremely big token (EBT)");
+                // initial buffer is stack allocated so no free()
+                *buf = malloc((*cap *= 2) * sizeof(char));
+                if ((*buf) == NULL) {
+                    fatal("malloc failed");
+                }
+            } else {
+                info("realloc called for gargantuanly big token (GBT)");
+                // if cap is bigger, then it must be heap memory so realloc
+                *buf = realloc(buf, (*cap *= 2) * sizeof(char));
+                if (!*buf) {
+                    free(old);
+                    fatal("realloc could not allocate storage for token");
+                }
+            }
+        }
+    }
+}
+
 struct token *token_ftokenize(FILE *stream) {
     struct token *root = NULL;
     struct token *walker = root;
-    char buf[4096];
+    size_t cap = 4096;
+    char sbuf[cap];
+    char *buf = sbuf;
     int idx = 0;
-    char c;
     while (!feof(stream) && !ferror(stream)) {
-        while ((c = fgetc(stream)) != EOF && !isspace(c)) {
-            buf[idx++] = c;
-            if (idx == 4096) {
-                fail("Dynamic allocation not supported");
-            }
-        }
+        get_next_token(stream, &buf, &idx, &cap);
 
         buf[idx] = 0;
         if (idx > 0) {
@@ -79,16 +108,12 @@ struct token *token_ftokenize(FILE *stream) {
 }
 
 struct token *token_ftokenize_r(struct token *tok, FILE *stream) {
-    char buf[4096];
+    size_t cap = 4096;
+    char sbuf[cap];
+    char *buf = sbuf;
     int idx = 0;
-    char c;
     while (!feof(stream) && !ferror(stream)) {
-        while ((c = fgetc(stream)) != EOF && !isspace(c)) {
-            buf[idx++] = c;
-            if (idx == 4096) {
-                fail("Dynamic allocation not supported");
-            }
-        }
+        get_next_token(stream, &buf, &idx, &cap);
 
         buf[idx] = 0;
         if (idx > 0) {
@@ -104,21 +129,15 @@ struct token *token_ftokenize_r(struct token *tok, FILE *stream) {
     return NULL;
 }
 
-struct token *token_ftokenize_ar(struct arena_block *arena, struct token *tok,
+struct token *token_ftokenize_ar(struct arena *arena, struct token *tok,
                                  FILE *stream) {
-    char buf[4096];
+    size_t cap = 4096;
+    char sbuf[cap];
+    char *buf = sbuf;
     int idx = 0;
-    char c;
+    int c;
     while (!feof(stream) && !ferror(stream)) {
-        while ((c = fgetc(stream)) != EOF && !isspace(c)) {
-            buf[idx++] = c;
-            if (c == 0) {
-                fail("c is zero");
-            }
-            if (idx == 4096) {
-                fail("Dynamic allocation not supported");
-            }
-        }
+        get_next_token(stream, &buf, &idx, &cap);
 
         buf[idx] = 0;
         if (idx > 0) {
@@ -160,18 +179,11 @@ struct token *token_tokenize(char const *s) {
     return root;
 }
 
-void token_free(struct token *t) {
-    free(t->value);
-    free(t);
-}
-
-void token_freeall(struct token *tokens) {
-    if (tokens == NULL)
-        return;
-
+void token_free(struct token *tokens) {
     while (tokens != NULL) {
         struct token *p = tokens->next;
-        token_free(tokens);
+        free(tokens->value);
+        free(tokens);
         tokens = p;
     }
 }

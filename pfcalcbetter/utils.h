@@ -11,23 +11,46 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#if !defined(NDEBUG) && !defined(NOPRINT)
-#define debug(fmt, ...)                                                        \
-    printf("[" __FILE__ ":" STR(__LINE__) "] " fmt, __VA_ARGS__)
-
-#define throw_halt(n) abort()
+#if defined(PRINT) && (PRINT & 1)
+#define critical(fmt, ...) fprintf(stderr, "\033[91m\033[1mCRITICAL: [" __FILE__ ":" STR(__LINE__) "]" fmt "\033[0m", ##__VA_ARGS__)
 #else
-#define debug(...) (void)0
-#define throw_halt(n) exit(n)
+#define critical(...) (void)0
 #endif
 
-#define fail(msg)                                                              \
+#if defined(PRINT) && (PRINT & 2)
+#define error(fmt, ...) fprintf(stderr, "\033[91m[" __FILE__ ":" STR(__LINE__) "]" fmt "\033[0m", ##__VA_ARGS__)
+#else
+#define error(...) (void)0
+#endif
+
+#if defined(PRINT) && (PRINT & 4)
+#define warning(fmt, ...) fprintf(stderr, "\033[93m[" __FILE__ ":" STR(__LINE__) "]" fmt "\033[0m", ##__VA_ARGS__)
+#else
+#define warning(...) (void)0
+#endif
+
+#if defined(PRINT) && (PRINT & 8)
+#define info(fmt, ...) fprintf(stderr, "\033[92m[" __FILE__ ":" STR(__LINE__) "]" fmt "\033[0m", ##__VA_ARGS__)
+#else
+#define info(...) (void)0
+#endif
+
+#if defined(PRINT) && (PRINT & 16)
+#define debug(fmt, ...) fprintf(stderr, "\033[94m[" __FILE__ ":" STR(__LINE__) "]" fmt "\033[0m", ##__VA_ARGS__)
+#else
+#define debug(...) (void)0
+#endif
+
+
+#define throw_halt(n) exit(n)
+
+#define fatal(msg)                                                              \
     do {                                                                       \
         fputs("[" __FILE__ ":" STR(__LINE__) "]" msg, stderr);                 \
         throw_halt(2);                                                         \
     } while (0)
 
-#define failf(fmt, ...)                                                        \
+#define fatalf(fmt, ...)                                                        \
     do {                                                                       \
         fprintf(stderr, "[" __FILE__ ":" STR(__LINE__) "]" fmt, __VA_ARGS__);  \
         throw_halt(2);                                                         \
@@ -57,20 +80,12 @@ typedef double pfnum_t;
 #endif
 
 #ifndef REQUIRE_NO_CHECKS
-#define require(condition, message)                                            \
+#define require(condition, ...)                                            \
     if (!(condition)) {                                                        \
-        fail("requirement not satisfied: " #condition message);                \
+        fatal("requirement not satisfied: " #condition __VA_ARGS__);                \
     }
 #else
 #define require(condition, message) (void)0;
-#endif
-
-pfnum_t safe_op(pfnum_t lhs, pfnum_t rhs,
-                pfnum_t (*operation)(pfnum_t, pfnum_t));
-
-pfnum_t divide(pfnum_t lhs, pfnum_t rhs);
-#if defined(PF_NUM_LONG)
-pfnum_t modulo(pfnum_t lhs, pfnum_t rhs);
 #endif
 
 #endif /* utils_h */

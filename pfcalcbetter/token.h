@@ -37,14 +37,13 @@ struct token *token_ftokenize(FILE *stream);
 /// which is the char data of the token
 struct token *token_ftokenize_r(struct token *tok, FILE *stream);
 
-struct token *token_ftokenize_ar(struct arena_block *arena, struct token *tok,
+struct token *token_ftokenize_ar(struct arena *arena, struct token *tok,
                                  FILE *stream);
 
 /// Implementation note: `token_fill` will allocate and copy s. It will **not**
 /// take ownership of the memory pointed to by s
 void token_fill(struct token *tok, char const *s, size_t len);
 
-void token_freeall(struct token *tokens);
 void token_free(struct token *tokens);
 
 #endif

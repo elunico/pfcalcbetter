@@ -33,50 +33,59 @@ int is_number(char const *s) {
 pfnum_t stack_consume(struct stack **s) {
     pfnum_t result = stack_pop(s);
     if (ISEMPTY(result)) {
-        fail("Not enough operators");
+        fatal("Not enough operators");
     }
     return result;
 }
 
-pfnum_t stack_consume_a(struct arena_block *arena, struct stack **s) {
+pfnum_t stack_consume_a(struct arena *arena, struct stack **s) {
     pfnum_t result = stack_pop_a(arena, s);
     if (ISEMPTY(result)) {
-        fail("Not enough operators");
+        fatal("Not enough operators");
     }
     return result;
 }
+
+#define CASE_RESOLVE(result, lhs, rhs, op)                                     \
+    case (#op)[0]:                                                             \
+        result = lhs op rhs;                                                   \
+        break
+
+#if defined(PFCALC_PREVENT_ZERO_DIV)
+#define SAFETY_CHECK(rhs)                                                      \
+    if (rhs == 0) {                                                            \
+        rhs = 1;                                                               \
+    }
+#else
+#define SAFETY_CHECK(rhs)                                                      \
+    if (rhs == 0) {                                                            \
+        fatal("Division by 0");                                                 \
+    }
+#endif
+
+#define CASE_SAFE_RESOLVE(result, lhs, rhs, op)                                \
+    case (#op)[0]:                                                             \
+        SAFETY_CHECK(rhs)                                                      \
+        result = lhs op rhs;                                                   \
+        break
 
 pfnum_t operate(pfnum_t lhs, pfnum_t rhs, char const *tok) {
     pfnum_t result;
     switch (tok[0]) {
-    case '+':
-        result = lhs + rhs;
-        break;
-    case '-':
-        result = lhs - rhs;
-        break;
-    case '*':
-        result = lhs * rhs;
-        break;
-    case '/':
-        result = safe_op(lhs, rhs, &divide);
-        break;
+        CASE_RESOLVE(result, lhs, rhs, +);
+        CASE_RESOLVE(result, lhs, rhs, -);
+        CASE_RESOLVE(result, lhs, rhs, *);
+        CASE_SAFE_RESOLVE(result, lhs, rhs, /);
 #ifdef PF_NUM_LONG
-    case '%':
-        result = safe_op(lhs, rhs, &modulus);
-        break;
-    case '&':
-        result = lhs & rhs;
-        break;
-    case '^':
-        result = lhs ^ rhs;
-        break;
-    case '|':
-        result = lhs | rhs;
-        break;
+        CASE_SAFE_RESOLVE(result, lhs, rhs, %);
+        CASE_RESOLVE(result, lhs, rhs, <<);
+        CASE_RESOLVE(result, lhs, rhs, >>);
+        CASE_RESOLVE(result, lhs, rhs, &);
+        CASE_RESOLVE(result, lhs, rhs, ^);
+        CASE_RESOLVE(result, lhs, rhs, |);
 #endif
     default:
-        failf("invalid operator: '%s'", tok);
+        fatalf("invalid operator: '%s'", tok);
         break;
     }
 
@@ -85,35 +94,35 @@ pfnum_t operate(pfnum_t lhs, pfnum_t rhs, char const *tok) {
 
 void process_token(char *tok, struct stack **s) {
     if (is_number(tok)) {
-        pfnum_t v = atopfnt(tok);
+        pfnum_t const v = atopfnt(tok);
         stack_push(s, v);
     } else if (ispunct(tok[0])) {
         require(strlen(tok) == 1, "operator must be of length 1");
-        pfnum_t rhs = stack_consume(s);
-        pfnum_t lhs = stack_consume(s);
-        pfnum_t result = operate(lhs, rhs, tok);
+        pfnum_t const rhs = stack_consume(s);
+        pfnum_t const lhs = stack_consume(s);
+        pfnum_t const result = operate(lhs, rhs, tok);
         debug("Step " PF_NUM_FMT " %s " PF_NUM_FMT " = " PF_NUM_FMT "\n", lhs,
               tok, rhs, result);
         stack_push(s, result);
     } else {
-        failf("Unrecognized token: %p '%x' %s\n", tok, tok[0], tok);
+        fatalf("Unrecognized token: %p '%x' %s\n", tok, tok[0], tok);
     }
 }
 
-void process_token_a(struct arena_block *arena, char *tok, struct stack **s) {
+void process_token_a(struct arena *arena, char *tok, struct stack **s) {
     if (is_number(tok)) {
-        pfnum_t v = atopfnt(tok);
+        pfnum_t const v = atopfnt(tok);
         stack_push_a(arena, s, v);
     } else if (ispunct(tok[0])) {
         require(strlen(tok) == 1, "operator must be of length 1");
-        pfnum_t rhs = stack_consume_a(arena, s);
-        pfnum_t lhs = stack_consume_a(arena, s);
-        pfnum_t result = operate(lhs, rhs, tok);
+        pfnum_t const rhs = stack_consume_a(arena, s);
+        pfnum_t const lhs = stack_consume_a(arena, s);
+        pfnum_t const result = operate(lhs, rhs, tok);
         debug("Step " PF_NUM_FMT " %s " PF_NUM_FMT " = " PF_NUM_FMT "\n", lhs,
               tok, rhs, result);
         stack_push_a(arena, s, result);
     } else {
-        failf("Unrecognized token: %p '%x' %s\n", tok, tok[0], tok);
+        fatalf("Unrecognized token: %p '%x' %s\n", tok, tok[0], tok);
     }
 }
 
@@ -125,10 +134,10 @@ pfnum_t pfCalculate(struct token *tokens) {
         tokens = tokens->next;
     }
 
-    pfnum_t result = stack_pop(&s);
+    pfnum_t const result = stack_pop(&s);
 
     if (!ISEMPTY(stack_pop(&s))) {
-        fail("Not enough operators");
+        fatal("Not enough operators");
     }
 
     return result;
@@ -137,10 +146,10 @@ pfnum_t pfCalculate(struct token *tokens) {
 void pfCalculate_r(struct token *t, struct stack **s, pfnum_t *result,
                    int done) {
     if (done) {
-        pfnum_t r = stack_pop(s);
+        pfnum_t const r = stack_pop(s);
 
         if (!ISEMPTY(stack_pop(s))) {
-            fail("Not enough operators");
+            fatal("Not enough operators");
         }
 
         *result = r;
@@ -150,13 +159,13 @@ void pfCalculate_r(struct token *t, struct stack **s, pfnum_t *result,
     process_token(tok, s);
 }
 
-void pfCalculate_ar(struct arena_block *arena, struct token *t,
-                    struct stack **s, pfnum_t *result, int done) {
+void pfCalculate_ar(struct arena *arena, struct token *t, struct stack **s,
+                    pfnum_t *result, int done) {
     if (done) {
-        pfnum_t r = stack_pop_a(arena, s);
+        pfnum_t const r = stack_pop_a(arena, s);
 
         if (!ISEMPTY(stack_pop_a(arena, s))) {
-            fail("Not enough operators");
+            fatal("Not enough operators");
         }
 
         *result = r;
@@ -170,7 +179,7 @@ int main(int argc, char *const argv[]) {
     struct arguments *args = arguments_parse(argc, argv);
 
     if (!arguments_wasset(args)) {
-        fail("Specify -i or -f FILE");
+        fatal("Specify -i or -f FILE");
     }
 
     struct token *root;
@@ -183,14 +192,14 @@ int main(int argc, char *const argv[]) {
         if (line[lineSize - 1] == '\n') {
             line[lineSize - 1] = '\0';
         } else {
-            fail("expected newline at end of input");
+            fatal("expected newline at end of input");
         }
         printf("Line: %s\n", line);
         root = token_tokenize(line);
         free(line);
         pfnum_t result = pfCalculate(root);
         printf("%s = " PF_NUM_FMT "\n", "expr", result);
-        token_freeall(root);
+        token_free(root);
     } else {
         FILE *f = fopen(filename, "r");
         struct token t = {0};
@@ -198,33 +207,26 @@ int main(int argc, char *const argv[]) {
 
         struct stat st;
         if (stat(filename, &st) != 0) {
-            fail("Could not stat file");
+            fatal("Could not stat file");
         }
 
         pfnum_t result;
 
         if (st.st_size > (1 << 19)) {
-            fail("File too large");
+            fatal("File too large");
         }
 
         if (st.st_size > (1 << 10)) {
-            struct arena_block *arena = arena_create(100);
-            struct arena_block *stack_arena = arena_create(1 << 19);
-            // TODO: this calls malloc a lot because each read to moved to a
-            // freshly allocated buffer. Maybe preallocate large chunks char *
-            // data then put the appropriate (aligned) pointer to each struct
-            // token object
-            while (token_ftokenize_ar(arena, &t, f) != NULL) {
+            struct arena *token_arena = arena_alloc(100);
+            struct arena *stack_arena = arena_alloc(1 << 19);
+            while (token_ftokenize_ar(token_arena, &t, f) != NULL) {
                 pfCalculate_ar(stack_arena, &t, &s, NULL, 0);
-                arena_block_free(arena, t.value);
+                arena_block_free(token_arena, t.value);
             }
-            pfCalculate_ar(arena, NULL, &s, &result, 1);
-            arena_free(arena);
+            pfCalculate_ar(token_arena, NULL, &s, &result, 1);
+            arena_free(token_arena);
+            arena_free(stack_arena);
         } else {
-            // TODO: this calls malloc a lot because each read to moved to a
-            // freshly allocated buffer. Maybe preallocate large chunks char *
-            // data then put the appropriate (aligned) pointer to each struct
-            // token object
             while (token_ftokenize_r(&t, f) != NULL) {
                 pfCalculate_r(&t, &s, NULL, 0);
                 free(t.value);

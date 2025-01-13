@@ -1,1 +1,0 @@
-/usr/bin/clang  -O3 -g -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk -mmacosx-version-min=15.1 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/atest.dir/atest.c.o CMakeFiles/atest.dir/arena.c.o CMakeFiles/atest.dir/stack.c.o -o atest
